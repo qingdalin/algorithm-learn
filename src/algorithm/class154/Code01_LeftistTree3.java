@@ -1,0 +1,121 @@
+package algorithm.class154;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StreamTokenizer;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2025/2/16 15:42
+ * // 左偏树模版题2，数据量增强，java版
+ * // 依次给定n个非负数字，表示有n个小根堆，每个堆只有一个数
+ * // 实现如下两种操作，操作一共调用m次
+ * // M x y : 第x个数字所在的堆和第y个数字所在的堆合并
+ * //         如果两个数字已经在一个堆或者某个数字已经删除，不进行合并
+ * // K x   : 打印第x个数字所在堆的最小值，并且在堆里删掉这个最小值
+ * //         如果第x个数字已经被删除，也就是找不到所在的堆，打印0
+ * //         若有多个最小值，优先删除编号小的
+ * // 1 <= n <= 10^6
+ * // 1 <= m <= 10^5
+ * // 测试链接 : https://www.luogu.com.cn/problem/P2713
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code01_LeftistTree3 {
+    public static int MAXN = 1000001;
+    public static int[] num = new int[MAXN];
+    public static int[] father = new int[MAXN];
+    public static int[] left = new int[MAXN];
+    public static int[] right = new int[MAXN];
+    public static int[] dist = new int[MAXN];
+    public static int n;
+    public static int m;
+
+    public static void prepare() {
+        dist[0] = -1;
+        for (int i = 1; i <= n; i++) {
+            dist[i] = left[i] = right[i] = 0;
+            father[i] = i;
+        }
+    }
+
+    public static int find(int i) {
+        father[i] = father[i] == i ? i : find(father[i]);
+        return father[i];
+    }
+
+    public static int merge(int i, int j) {
+        if (i == 0 || j == 0) {
+            return i + j;
+        }
+        int tmp;
+        if (num[i] > num[j] || (num[i] == num[j] && j < i)) {
+            tmp = i;
+            i = j;
+            j = tmp;
+        }
+        right[i] = merge(right[i], j);
+        if (dist[left[i]] < dist[right[i]]) {
+            tmp = left[i];
+            left[i] = right[i];
+            right[i] = tmp;
+        }
+        dist[i] = dist[right[i]] + 1;
+        father[left[i]] = father[right[i]] = i;
+        return i;
+    }
+
+    public static int pop(int i) {
+        father[left[i]] = left[i];
+        father[right[i]] = right[i];
+        // 并查集有路径压缩，所以i下方的某个节点x，可能有father[x] = i
+        // 现在要删掉i了，所以x往上会找不到正确的头节点
+        // 为了任何节点往上都能找到正确的头，所以要有下面这句
+        father[i] = merge(left[i], right[i]);
+        left[i] = right[i] = dist[i] = 0;
+        return father[i];
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(bf);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken(); n = (int) in.nval;
+        prepare();
+        for (int i = 1; i <= n; i++) {
+            in.nextToken();
+            num[i] = (int) in.nval;
+        }
+        in.nextToken(); m = (int) in.nval;
+        String op;
+        for (int i = 1, x, y; i <= m; i++) {
+            in.nextToken(); op = in.sval;
+            in.nextToken(); x = (int) in.nval;
+            if (op.equals("M")) {
+                in.nextToken(); y = (int) in.nval;
+                if (num[x] != -1 && num[y] != -1) {
+                    int l = find(x);
+                    int r = find(y);
+                    if (l != r) {
+                        merge(l, r);
+                    }
+                }
+            } else {
+                if (num[x] == -1) {
+                    out.println(0);
+                } else {
+                    int ans = find(x);
+                    out.println(num[ans]);
+                    pop(ans);
+                    num[ans] = -1;
+                }
+            }
+        }
+        out.flush();
+        out.close();
+        bf.close();
+    }
+}

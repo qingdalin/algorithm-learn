@@ -1,0 +1,141 @@
+package algorithm.class110segmenttree01;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StreamTokenizer;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2024/8/26 20:57
+ * https://www.luogu.com.cn/problem/P3372
+ */
+public class SegmentTreeAddQuerySum01 {
+    public static int MAXN = 100001;
+    public static int n, m;
+    public static long[] arr = new long[MAXN];
+    public static long[] sum = new long[MAXN << 2];
+    public static long[] add = new long[MAXN << 2];
+
+    private static void up(int i) {
+        sum[i] = sum[i << 1] + sum[i << 1 | 1];
+    }
+
+    private static void down(int i, int ln, int rn) {
+        if (add[i] != 0) {
+            lazy(i << 1, add[i], ln);
+            lazy(i << 1 | 1, add[i], rn);
+            add[i] = 0;
+        }
+    }
+
+    // 当前来到l~r范围，对应的信息下标是i，范围上数字的个数是n = r-l+1
+    // 现在收到一个懒更新任务 : l~r范围上每个数字增加v
+    // 这个懒更新任务有可能是任务范围把当前线段树范围全覆盖导致的
+    // 也有可能是父范围的懒信息下发下来的
+    // 总之把线段树当前范围的sum数组和add数组调整好
+    // 就不再继续往下下发了，懒住了
+    public static void lazy(int i, long v, int n) {
+        sum[i] += v * n;
+        add[i] += v;
+    }
+
+    public static void build(int l, int r, int i) {
+        if (l == r) {
+            sum[i] = arr[l];
+        } else {
+            int mid = (l + r) >> 1;
+            // i * 2
+            build(l, mid, i << 1);
+            // i * 2 + 1
+            build(mid + 1, r, i << 1 | 1);
+            up(i);
+        }
+        add[i] = 0;
+    }
+
+    public static void add(int jobl, int jobr, long jobv, int l, int r, int i) {
+        if (jobl <= l && r <= jobr) {
+            // 全部包裹，懒更新
+            lazy(i, jobv, r - l + 1);
+        } else {
+            int mid = (l + r) >> 1;
+            down(i, mid - l + 1, r - mid);
+            if (jobl <= mid) {
+                add(jobl, jobr, jobv, l, mid, i << 1);
+            }
+            if (jobr > mid) {
+                add(jobl, jobr, jobv, mid + 1, r, i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+
+
+    /**
+     * 线段树范围查询jobl到jobr的和
+     *
+      * @param jobl 任务的左侧边界
+     * @param jobr 任务的右侧边界
+     * @param l 线段树当前左边界
+     * @param r 线段树当前右边界
+     * @param i sum数组的位置
+     * @return 总和
+     */
+    public static long query(int jobl, int jobr, int l, int r, int i) {
+        if (jobl <= l && r <= jobr) {
+            // 当前l-r范围被任务包裹，直接返回
+            return sum[i];
+        }
+        int mid = (l + r) >> 1;
+        // 任务  线段树中点mid=4
+        // 懒更新, l - mid的个数，mid + 1到r的个数
+        down(i, mid - l + 1, r - mid);
+        long ans = 0;
+        // 2-3, 1-4 5-8
+        if (jobl <= mid) {
+            ans += query(jobl, jobr, l, mid, i << 1);
+        }
+        if (jobr > mid) {
+            ans += query(jobl, jobr, mid + 1, r, i << 1 | 1);
+        }
+        return ans;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(bf);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            for (int i = 1; i <= n; i++) {
+                in.nextToken();
+                arr[i] = (long) in.nval;
+            }
+            build(1, n, 1);
+            long jobv;
+            for (int i = 0, op, jobl, jobr; i < m; i++) {
+                in.nextToken();
+                op = (int) in.nval;
+                if (op == 1) {
+                    in.nextToken(); jobl= (int) in.nval;
+                    in.nextToken(); jobr = (int) in.nval;
+                    in.nextToken(); jobv = (long) in.nval;
+                    add(jobl, jobr, jobv, 1, n, 1);
+                } else {
+                    in.nextToken(); jobl = (int) in.nval;
+                    in.nextToken(); jobr = (int) in.nval;
+                    System.out.println(query(jobl, jobr, 1, n, 1));
+                }
+            }
+        }
+        out.flush();
+        out.close();
+        bf.close();
+    }
+}

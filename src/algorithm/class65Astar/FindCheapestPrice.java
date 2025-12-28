@@ -1,0 +1,34 @@
+package algorithm.class65Astar;
+
+import java.util.Arrays;
+
+/**
+ * @author 汪大鹏
+ * @version 1.0
+ * @date 2024-04-24 20:33
+ * 有 n 个城市通过一些航班连接。给你一个数组 flights ，其中 flights[i] = [fromi, toi, pricei] ，
+ * 表示该航班都从城市 fromi 开始，以价格 pricei 抵达 toi。
+ *
+ * 现在给定所有的城市和航班，以及出发城市 src 和目的地 dst，你的任务是找到出一条最多经过 k 站中转的路线，
+ * 使得从 src 到 dst 的 价格最便宜 ，并返回该价格。 如果不存在这样的路线，则输出 -1。
+ * Bellman-ford
+ * https://leetcode.cn/problems/cheapest-flights-within-k-stops/description/
+ */
+public class FindCheapestPrice {
+    public int findCheapestPrice(int n, int[][] flights, int start, int target, int k) {
+        int[] cur = new int[n];
+        Arrays.fill(cur, Integer.MAX_VALUE);
+        cur[start] = 0;
+        for (int i = 0; i <= k; i++) {
+            int[] next = Arrays.copyOf(cur, n);
+            for (int[] edge : flights) {
+                if (cur[edge[0]] != Integer.MAX_VALUE) {
+                    next[edge[1]] = Math.min(next[edge[1]], cur[edge[0]] + edge[2]);
+
+                }
+            }
+            cur = next;
+        }
+        return cur[target] == Integer.MAX_VALUE ? -1 : cur[target];
+    }
+}

@@ -1,0 +1,135 @@
+package algorithm.class83dp18;
+
+import java.io.*;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2024/7/12 19:42
+ * 给定一个无序数组arr，其中元素可正、可负、可0。给定一个整数k，求arr所有的子数组中累加和小于或等于k的最长子数组长度
+ * 例如：arr = [3, -2, -4, 0, 6], k = -2. 相加和小于等于-2的最长子数组为{3, -2, -4, 0}，所以结果返回4
+ * [要求]
+ * 时间复杂度为O(n)，空间复杂度为O(n)
+ * https://www.nowcoder.com/practice/3473e545d6924077a4f7cbc850408ade
+ */
+public class LongestSubarraySumNoMoreK {
+    public static int MAXN = 100001;
+    public static int[] nums = new int[MAXN];
+    public static int[] minSums = new int[MAXN];
+    public static int[] minSumEnds = new int[MAXN];
+    public static int n, k;
+    public static void main(String[] args) throws IOException {
+        BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer st = new StreamTokenizer(bf);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (st.nextToken() != StreamTokenizer.TT_EOF) {
+            n = (int) st.nval;
+            st.nextToken();
+            k = (int) st.nval;
+            for (int i = 0; i < n; i++) {
+                st.nextToken();
+                nums[i] = (int) st.nval;
+            }
+            // 扩充重要
+            System.out.println(f1());
+        }
+        out.flush();
+        out.close();
+        bf.close();
+    }
+
+    private static int f2() {
+        minSums[n - 1] = nums[n - 1];
+        minSumEnds[n - 1] = n - 1;
+        for (int i = n - 2; i >= 0; i--) {
+            if (minSums[i + 1] < 0) {
+                minSums[i] = nums[i] + minSums[i + 1];
+                minSumEnds[i] = minSumEnds[i + 1];
+            } else {
+                minSums[i] = nums[i];
+                minSumEnds[i] = i;
+            }
+        }
+        int ans = 0;
+        for (int i = 0, sum = 0, end = 0; i < n; i++) {
+            while (end < n && sum + minSums[end] <= k) {
+                sum += minSums[end];
+                end = minSumEnds[end] + 1;
+            }
+            if (end > i) {
+                ans = Math.max(ans, end - i);
+                sum -= nums[i];
+            } else {
+                end = i + 1;
+            }
+        }
+        return ans;
+    }
+
+    public static int compute2() {
+        minSums[n - 1] = nums[n - 1];
+        minSumEnds[n - 1] = n - 1;
+        for (int i = n - 2; i >= 0; i--) {
+            if (minSums[i + 1] < 0) {
+                minSums[i] = nums[i] + minSums[i + 1];
+                minSumEnds[i] = minSumEnds[i + 1];
+            } else {
+                minSums[i] = nums[i];
+                minSumEnds[i] = i;
+            }
+        }
+        int ans = 0;
+        for (int i = 0, sum = 0, end = 0; i < n; i++) {
+            while (end < n && sum + minSums[end] <= k) {
+                sum += minSums[end];
+                end = minSumEnds[end] + 1;
+            }
+            if (end > i) {
+                // 如果end > i，
+                // 窗口范围：i...end-1，那么窗口有效
+                ans = Math.max(ans, end - i);
+                sum -= nums[i];
+            } else {
+                // 如果end == i，那么说明窗口根本没扩出来，代表窗口无效
+                // end来到i+1位置，然后i++了
+                // 继续以新的i位置做开头去扩窗口
+                end = i + 1;
+            }
+        }
+        return ans;
+    }
+
+    private static int f1() {
+        int[] sums = new int[n + 1];
+        // 前缀和，
+        for (int i = 0, sum = 0; i < n; i++) {
+            sum += nums[i];
+            sums[i + 1] = Math.max(sum, sums[i]);
+        }
+        int ans = 0;
+        for (int i = 0, sum = 0, len, pre; i < n; i++) {
+            sum += nums[i];
+            pre = find(sums, sum - k);
+            len = pre == -1 ? 0 : i - pre + 1;
+            ans = Math.max(ans, len);
+        }
+        return ans;
+    }
+
+    private static int find(int[] sums, int i) {
+        int l = 0;
+        int r = n - 1;
+        int m = 0;
+        int ans = -1;
+        while (l <= r) {
+            m = (l + r) / 2;
+            if (sums[m] >= i) {
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+}
