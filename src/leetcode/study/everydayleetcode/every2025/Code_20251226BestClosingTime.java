@@ -1,4 +1,4 @@
-package leetcode.study.everydayleetcode;
+package leetcode.study.everydayleetcode.every2025;
 
 /**
  * @author: 汪大鹏
