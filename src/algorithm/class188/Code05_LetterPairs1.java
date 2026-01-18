@@ -1,0 +1,163 @@
+package algorithm.class188;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2026/1/17 12:39
+ * // 无序字母对，java版
+ * // 给定n个字母对，每个字母对有两个字母，字母只可能是A~Z、a~z
+ * // 字母对内部不区分顺序，ab和ba是相同的，但是区分大小写，Ab和ab是不同的
+ * // 题目不会给定重复的字母对，构造一个长度n+1的字符串，让每个字母对都出现
+ * // 一个字母对的两个字母，在字符串中相邻出现即可，请输出字典序最小的方案
+ * // 如果没有满足要求的方案，打印"No Solution"
+ * // 1 <= n <= 1326
+ * // 测试链接 : https://www.luogu.com.cn/problem/P1341
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code05_LetterPairs1 {
+    public static int MAXN = 53;
+    public static int MAXM = 2001;
+    public static int n = 52, m;
+    public static char[][] arr = new char[MAXM][2];
+    public static int[][] graph = new int[MAXN][MAXN];
+    public static int[] deg = new int[MAXN];
+    public static int[] cur = new int[MAXN];
+    public static int[] path = new int[MAXM];
+    public static int cntp;
+
+    public static int getInt(char c) {
+        return c <= 'Z' ? (c - 'A' + 1) : (c - 'a' + 27);
+    }
+
+    public static char getChar(int v) {
+        return (char) (v <= 26 ? (v + 'A' - 1) : (v + 'a' - 27));
+    }
+
+    public static void connect() {
+        for (int i = 1, u, v; i <= m; i++) {
+            u = getInt(arr[i][0]);
+            v = getInt(arr[i][1]);
+            graph[u][v]++;
+            graph[v][u]++;
+            deg[u]++;
+            deg[v]++;
+        }
+        for (int i = 1; i <= n; i++) {
+            cur[i] = 1;
+        }
+    }
+
+    public static int undirectedStart() {
+        int odd = 0;
+        for (int i = 1; i <= n; i++) {
+            if ((deg[i] & 1) == 1) {
+                odd++;
+            }
+        }
+        if (odd != 0 && odd != 2) {
+            return -1;
+        }
+        for (int i = 1; i <= n; i++) {
+            if (odd == 0 && deg[i] > 0) {
+                return i;
+            }
+            if (odd == 2 && ((deg[i] & 1) == 1)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static void euler(int u) {
+        for (int v = cur[u]; v <= n; v = cur[u]) {
+            cur[u]++;
+            if (graph[u][v] > 0) {
+                graph[u][v]--;
+                graph[v][u]--;
+                euler(v);
+            }
+        }
+        path[++cntp] = u;
+    }
+
+    public static void main(String[] args) throws Exception {
+        FastReader in = new FastReader(System.in);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        m = in.nextInt();
+        for (int i = 1; i <= m; i++) {
+            arr[i][0] = in.nextChar();
+            arr[i][1] = in.nextChar();
+        }
+        connect();
+        int start = undirectedStart();
+        if (start == -1) {
+            out.println("No Solution");
+        } else {
+            euler(start);
+            if (cntp != m + 1) {
+                out.println("No Solution");
+            } else {
+                for (int i = cntp; i >= 1; i--) {
+                    out.print(getChar(path[i]));
+                }
+                out.println();
+            }
+        }
+        out.flush();
+        out.close();
+    }
+    // 读写工具类
+    static class FastReader {
+        private final byte[] buffer = new byte[1 << 16];
+        private int ptr = 0, len = 0;
+        private final InputStream in;
+
+        FastReader(InputStream in) {
+            this.in = in;
+        }
+
+        private int readByte() throws IOException {
+            if (ptr >= len) {
+                len = in.read(buffer);
+                ptr = 0;
+                if (len <= 0)
+                    return -1;
+            }
+            return buffer[ptr++];
+        }
+
+        int nextInt() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            int val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+
+        char nextChar() throws IOException {
+            int c;
+            do {
+                c = readByte();
+                if (c == -1)
+                    return 0;
+            } while (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')));
+            return (char) c;
+        }
+
+    }
+}

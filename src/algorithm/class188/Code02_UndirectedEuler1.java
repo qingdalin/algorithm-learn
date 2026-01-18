@@ -1,0 +1,194 @@
+package algorithm.class188;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.Arrays;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2026/1/17 10:45
+ * // 无向图的欧拉路径，java版
+ * // 图中给定m条无向边，每条边给出两个端点
+ * // 如果存在欧拉路径，输出字典序最小的结果，如果不存在打印No
+ * // 节点编号的范围是[1, 500]，所有点不一定都出现，以给定的边为准
+ * // 1 <= m <= 1024
+ * // 测试链接 : https://www.luogu.com.cn/problem/P2731
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code02_UndirectedEuler1 {
+    public static int MAXN = 501;
+    public static int MAXM = 1025;
+    public static int m, k, n = 500;
+    public static int[][] edgeArr = new int[MAXM << 1][3];
+    public static boolean[] vis = new boolean[MAXM];
+
+    public static int[] head = new int[MAXN];
+    public static int[] nxt = new int[MAXM << 1];
+    public static int[] to = new int[MAXM << 1];
+    public static int[] eid = new int[MAXM << 1];
+    public static int cntg;
+
+    public static int[] cur = new int[MAXN];
+    public static int[] deg = new int[MAXN];
+    public static int[] path = new int[MAXM];
+    public static int cntp;
+
+    public static void addEdge(int u, int v, int id) {
+        nxt[++cntg] = head[u];
+        to[cntg] = v;
+        eid[cntg] = id;
+        head[u] = cntg;
+    }
+
+    public static void connect() {
+        Arrays.sort(edgeArr, 1, k + 1, (e1, e2) -> e1[0] != e2[0] ? e1[0] - e2[0] : e1[1] - e2[1]);
+        for (int l = 1, r = 1; l <= k; l = ++r) {
+            while (r + 1 <= k && edgeArr[l][0] == edgeArr[r + 1][0]) {
+                r++;
+            }
+            for (int i = r, u, v, id; i >= l; i--) {
+                u = edgeArr[i][0];
+                v = edgeArr[i][1];
+                id = edgeArr[i][2];
+                deg[u]++;
+                addEdge(u, v, id);
+            }
+        }
+        for (int i = 1; i <= n; i++) {
+            cur[i] = head[i];
+        }
+    }
+
+    public static int undirectedStart() {
+        int odd = 0;
+        for (int i = 1; i <= n; i++) {
+            if ((deg[i] & 1) == 1) {
+                odd++;
+            }
+        }
+        if (odd != 0 && odd != 2) {
+            return -1;
+        }
+        for (int i = 1; i <= n; i++) {
+            if (odd == 0 && deg[i] > 0) {
+                return i;
+            }
+            if (odd == 2 && (deg[i] & 1) == 1) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static void euler1(int u) {
+        for (int e = cur[u]; e > 0; e = cur[u]) {
+            cur[u] = nxt[e];
+            if (!vis[eid[e]]) {
+                vis[eid[e]] = true;
+                euler1(to[e]);
+            }
+        }
+        path[++cntp] = u;
+    }
+
+    public static int[] sta = new int[MAXM];
+    public static int top;
+
+    public static void euler2(int node) {
+        top = 0;
+        sta[++top] = node;
+        while (top > 0) {
+            int u = sta[top--];
+            int e = cur[u];
+            if (e != 0) {
+                cur[u] = nxt[e];
+                if (!vis[eid[e]]) {
+                    vis[eid[e]] = true;
+                    sta[++top] = u;
+                    sta[++top] = to[e];
+                } else {
+                    sta[++top] = u;
+                }
+            } else {
+                path[++cntp] = u;
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        FastReader in = new FastReader(System.in);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        m = in.nextInt();
+        k = 0;
+        for (int i = 1, u, v; i <= m; i++) {
+            u = in.nextInt();
+            v = in.nextInt();
+            edgeArr[++k][0] = u;
+            edgeArr[k][1] = v;
+            edgeArr[k][2] = i;
+            edgeArr[++k][0] = v;
+            edgeArr[k][1] = u;
+            edgeArr[k][2] = i;
+        }
+        connect();
+        int start = undirectedStart();
+        if (start == -1) {
+            out.println("No");
+        } else {
+//             euler1(start);
+            euler2(start);
+            if (cntp != m + 1) {
+                out.println("No");
+            } else {
+                for (int i = cntp; i >= 1; i--) {
+                    out.println(path[i]);
+                }
+                out.println();
+            }
+        }
+        out.flush();
+        out.close();
+    }
+
+    // 读写工具类
+    static class FastReader {
+        private final byte[] buffer = new byte[1 << 16];
+        private int ptr = 0, len = 0;
+        private final InputStream in;
+
+        FastReader(InputStream in) {
+            this.in = in;
+        }
+
+        private int readByte() throws IOException {
+            if (ptr >= len) {
+                len = in.read(buffer);
+                ptr = 0;
+                if (len <= 0)
+                    return -1;
+            }
+            return buffer[ptr++];
+        }
+
+        int nextInt() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            int val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+    }
+}
