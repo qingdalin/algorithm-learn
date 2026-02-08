@@ -1,0 +1,249 @@
+package algorithm.class190;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2026/2/4 19:19
+ * // 劫掠计划，java版
+ * // 一共有n个城市，给定m条有向道路，每个城市给定拥有的钱数
+ * // 给定起点城市s，给定p个有酒吧的城市，有酒吧的城市才能作为终点
+ * // 路线必须从s出发到任意终点停止，重复经过城市的话，钱仅获得一次
+ * // 题目保证一定存在这样的路线，打印能获得的最大钱数
+ * // 1 <= n、m <= 5 * 10^5
+ * // 测试链接 : https://www.luogu.com.cn/problem/P3627
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code03_RobberyPlan1 {
+    public static int MAXN = 500001;
+    public static int MAXM = 500001;
+    public static int INF = 1000000001;
+    public static int n, m, s, p;
+
+    public static int[] money = new int[MAXN];
+    public static boolean[] isBar = new boolean[MAXN];
+    public static int[] a = new int[MAXM];
+    public static int[] b = new int[MAXM];
+
+    public static int[] head = new int[MAXN];
+    public static int[] nxt = new int[MAXM];
+    public static int[] to = new int[MAXM];
+    public static int cntg;
+
+    public static int[] dfn = new int[MAXN];
+    public static int[] low = new int[MAXN];
+    public static int cntd;
+
+    public static int[] sta = new int[MAXN];
+    public static int top;
+
+    public static int[] belong = new int[MAXN];
+    public static int[] sum = new int[MAXN];
+    public static boolean[] hasBar = new boolean[MAXN];
+    public static int sccCnt;
+
+    public static int[] dp = new int[MAXN];
+
+    public static int[][] stack = new int[MAXN][3];
+    public static int u, status, e, stacksize;
+
+    public static void push(int u, int status, int e) {
+        stack[stacksize][0] = u;
+        stack[stacksize][1] = status;
+        stack[stacksize][2] = e;
+        stacksize++;
+    }
+
+    public static void pop() {
+        stacksize--;
+        u = stack[stacksize][0];
+        status = stack[stacksize][1];
+        e = stack[stacksize][2];
+    }
+
+    public static void addEdge(int u, int v) {
+        nxt[++cntg] = head[u];
+        to[cntg] = v;
+        head[u] = cntg;
+    }
+
+    public static void tarjan1(int u) {
+        dfn[u] = low[u] = ++cntd;
+        sta[++top] = u;
+        for (int e = head[u]; e > 0; e = nxt[e]) {
+            int v = to[e];
+            if (dfn[v] == 0) {
+                tarjan1(v);
+                low[u] = Math.min(low[u], low[v]);
+            } else {
+                if (belong[v] == 0) {
+                    low[u] = Math.min(low[u], dfn[v]);
+                }
+            }
+        }
+        if (dfn[u] == low[u]) {
+            sccCnt++;
+            sum[sccCnt] = 0;
+            hasBar[sccCnt] = false;
+            int pop;
+            do {
+                pop = sta[top--];
+                belong[pop] = sccCnt;
+                sum[sccCnt] += money[pop];
+                hasBar[sccCnt] |= isBar[pop];
+            } while (pop != u);
+        }
+    }
+
+    public static void tarjan2(int node) {
+        stacksize = 0;
+        push(node, -1, -1);
+        int v;
+        while (stacksize > 0) {
+            pop();
+            if (status == -1) {
+                dfn[u] = low[u] = ++cntd;
+                sta[++top] = u;
+                e = head[u];
+            } else {
+                v = to[e];
+                if (status == 0) {
+                    low[u] = Math.min(low[u], low[v]);
+                }
+                if (status == 1 && belong[v] == 0) {
+                    low[u] = Math.min(low[u], dfn[v]);
+                }
+                e = nxt[e];
+            }
+            if (e != 0) {
+                v = to[e];
+                if (dfn[v] == 0) {
+                    push(u, 0, e);
+                    push(v, -1, -1);
+                } else {
+                    push(u, 1, e);
+                }
+            } else {
+                if (dfn[u] == low[u]) {
+                    sccCnt++;
+                    sum[sccCnt] = 0;
+                    hasBar[sccCnt] = false;
+                    int pop;
+                    do {
+                        pop = sta[top--];
+                        belong[pop] = sccCnt;
+                        sum[sccCnt] += money[pop];
+                        hasBar[sccCnt] |= isBar[pop];
+                    } while (pop != u);
+                }
+            }
+        }
+    }
+
+    public static void condense() {
+        cntg = 0;
+        for (int i = 1; i <= sccCnt; i++) {
+            head[i] = 0;
+        }
+        for (int i = 1; i <= m; i++) {
+            int scc1 = belong[a[i]];
+            int scc2 = belong[b[i]];
+            if (scc1 > 0 && scc2 > 0 && scc1 != scc2) {
+                addEdge(scc1, scc2);
+            }
+        }
+    }
+
+    public static int dpOnDAG() {
+        for (int u = 1; u <= sccCnt; u++) {
+            dp[u] = -INF;
+        }
+        dp[belong[s]] = sum[belong[s]];
+        for (int u = sccCnt; u > 0; u--) {
+            for (int e = head[u]; e > 0; e = nxt[e]) {
+                int v = to[e];
+                dp[v] = Math.max(dp[v], dp[u] + sum[v]);
+            }
+        }
+        int ans = 0;
+        for (int u = 1; u <= sccCnt; u++) {
+            if (hasBar[u]) {
+                ans = Math.max(ans, dp[u]);
+            }
+        }
+        return ans;
+    }
+
+    public static void main(String[] args) throws Exception {
+        FastReader in = new FastReader(System.in);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        n = in.nextInt();
+        m = in.nextInt();
+        for (int i = 1; i <= m; i++) {
+            a[i] = in.nextInt();
+            b[i] = in.nextInt();
+            addEdge(a[i], b[i]);
+        }
+        for (int i = 1; i <= n; i++) {
+            money[i] = in.nextInt();
+        }
+        s = in.nextInt();
+        p = in.nextInt();
+        for (int i = 1, x; i <= p; i++) {
+            x = in.nextInt();
+            isBar[x] = true;
+        }
+//        tarjan1(s);
+        tarjan2(s);
+        condense();
+        // int ans = topo();
+        int ans = dpOnDAG();
+        out.println(ans);
+        out.flush();
+        out.close();
+    }
+
+    // 读写工具类
+    static class FastReader {
+        private final byte[] buffer = new byte[1 << 16];
+        private int ptr = 0, len = 0;
+        private final InputStream in;
+
+        FastReader(InputStream in) {
+            this.in = in;
+        }
+
+        private int readByte() throws IOException {
+            if (ptr >= len) {
+                len = in.read(buffer);
+                ptr = 0;
+                if (len <= 0)
+                    return -1;
+            }
+            return buffer[ptr++];
+        }
+
+        int nextInt() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            int val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+    }
+
+}
