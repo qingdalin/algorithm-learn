@@ -1,0 +1,210 @@
+package algorithm.class191;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2026/2/27 19:10
+ * // 关键网络线路，java版
+ * // 给定一张无向图，一共n个点、m条边，保证所有点连通
+ * // 给定k个提供A服务的节点，给定l个提供B服务的节点，保证k和l都是正数
+ * // 一个节点可能不提供服务，也可能提供A服务或者B服务或者两种都有
+ * // 每个节点可以通过边，获得任何节点提供的服务，但是必须同时获得两种服务
+ * // 如果断开某一条边，使得某些节点无法同时获得两种服务，这样的边叫关键边
+ * // 打印关键边的数量，打印每条关键边的两个端点
+ * // 1 <= n <= 10^5
+ * // 1 <= m <= 10^6
+ * // 测试链接 : https://www.luogu.com.cn/problem/P7687
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code03_CriticalNetworkLines1 {
+    public static int MAXN = 100001;
+    public static int MAXM = 1000001;
+    public static int n, m, k, l;
+
+    public static int[] acnt = new int[MAXN];
+    public static int[] bcnt = new int[MAXN];
+
+    public static int[] head = new int[MAXN];
+    public static int[] nxt = new int[MAXM << 1];
+    public static int[] to = new int[MAXM << 1];
+    public static int cntg;
+
+    public static int[] dfn = new int[MAXN];
+    public static int[] low = new int[MAXN];
+    public static int cntd;
+
+    public static int[] ans1 = new int[MAXN];
+    public static int[] ans2 = new int[MAXN];
+    public static int cnta;
+
+    public static int[] stau = new int[MAXN];
+    public static int[] stap = new int[MAXN];
+    public static int[] stas = new int[MAXN];
+    public static int[] stae = new int[MAXN];
+    public static int u, preEdge, status, e, stasiz;
+
+    public static void push(int u, int preEdge, int status, int e) {
+        stau[stasiz] = u;
+        stap[stasiz] = preEdge;
+        stas[stasiz] = status;
+        stae[stasiz] = e;
+        stasiz++;
+    }
+
+    public static void pop() {
+        stasiz--;
+        u = stau[stasiz];
+        preEdge = stap[stasiz];
+        status = stas[stasiz];
+        e = stae[stasiz];
+    }
+
+    public static void addEdge(int u, int v) {
+        nxt[++cntg] = head[u];
+        to[cntg] = v;
+        head[u] = cntg;
+    }
+
+    public static void tarjan1(int u, int preEdge) {
+        dfn[u] = low[u] = ++cntd;
+        for (int e = head[u]; e > 0; e = nxt[e]) {
+            if ((e ^ 1) == preEdge) {
+                continue;
+            }
+            int v = to[e];
+            if (dfn[v] == 0) {
+                tarjan1(v, e);
+                low[u] = Math.min(low[u], low[v]);
+                if (low[v] > dfn[u]) {
+                    if (acnt[v] == 0 || acnt[v] == k || bcnt[v] == 0 || bcnt[v] == l) {
+                        cnta++;
+                        ans1[cnta] = v;
+                        ans2[cnta] = u;
+                    }
+                }
+                acnt[u] += acnt[v];
+                bcnt[u] += bcnt[v];
+            } else {
+                low[u] = Math.min(low[u], dfn[v]);
+            }
+        }
+    }
+
+    public static void tarjan2(int node, int pree) {
+        stasiz = 0;
+        push(node, pree, -1, -1);
+        int v;
+        while (stasiz > 0) {
+            pop();
+            if (status == -1) {
+                dfn[u] = low[u] = ++cntd;
+                e = head[u];
+            } else {
+                v = to[e];
+                if (status == 0) {
+                    low[u] = Math.min(low[u], low[v]);
+                    if (low[v] > dfn[u]) {
+                        if (acnt[v] == 0 || acnt[v] == k || bcnt[v] == 0 || bcnt[v] == l) {
+                            cnta++;
+                            ans1[cnta] = v;
+                            ans2[cnta] = u;
+                        }
+                    }
+                    acnt[u] += acnt[v];
+                    bcnt[u] += bcnt[v];
+                } else {
+                    low[u] = Math.min(low[u], dfn[v]);
+                }
+                e = nxt[e];
+            }
+            if ((e ^ 1) == preEdge) {
+                e = nxt[e];
+            }
+            if (e != 0) {
+                v = to[e];
+                if (dfn[v] == 0) {
+                    push(u, preEdge, 0, e);
+                    push(v, e, -1, -1);
+                } else {
+                    push(u, preEdge, 1, e);
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        FastReader in = new FastReader(System.in);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        n = in.nextInt();
+        m = in.nextInt();
+        k = in.nextInt();
+        l = in.nextInt();
+        cntg = 1;
+        for (int i = 1, x; i <= k; i++) {
+            x = in.nextInt();
+            acnt[x] = 1;
+        }
+        for (int i = 1, x; i <= l; i++) {
+            x = in.nextInt();
+            bcnt[x] = 1;
+        }
+        for (int i = 1, u, v; i <= m; i++) {
+            u = in.nextInt();
+            v = in.nextInt();
+            addEdge(u, v);
+            addEdge(v, u);
+        }
+        // tarjan1(i, 0);
+        tarjan2(1, 0);
+        out.println(cnta);
+        for (int i = 1; i <= cnta; i++) {
+            out.println(ans1[i] + " " + ans2[i]);
+        }
+        out.flush();
+        out.close();
+    }
+
+    // 读写工具类
+    static class FastReader {
+        private final byte[] buffer = new byte[1 << 16];
+        private int ptr = 0, len = 0;
+        private final InputStream in;
+
+        FastReader(InputStream in) {
+            this.in = in;
+        }
+
+        private int readByte() throws IOException {
+            if (ptr >= len) {
+                len = in.read(buffer);
+                ptr = 0;
+                if (len <= 0)
+                    return -1;
+            }
+            return buffer[ptr++];
+        }
+
+        int nextInt() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            int val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+    }
+}
