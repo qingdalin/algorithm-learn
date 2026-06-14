@@ -8,6 +8,6 @@ package leetcode.leetcodeweek.test2026.test505;
  */
 public class Code505_03 {
     public static long maximumSum(int[] nums, int m, int l, int r) {
-
+        return 0;
     }
 }
