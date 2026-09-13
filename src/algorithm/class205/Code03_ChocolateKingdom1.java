@@ -1,0 +1,214 @@
+package algorithm.class205;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2026/9/12 15:51
+ * // 巧克力王国，java版
+ * // 一共n个点，每个点有坐标(x, y)，还有点权v
+ * // 一共m条查询，格式 a b c，含义如下
+ * // 满足 a * x + b * y < c 的所有点，打印点权累加和
+ * // 1 <= n、m <= 5 * 10^4
+ * // -10^9 <= a、b、x、y <= +10^9
+ * // 测试链接 : https://www.luogu.com.cn/problem/P4475
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code03_ChocolateKingdom1 {
+    public static int MAXN = 50001;
+    public static long INF = 1L << 60;
+    public static int n, m;
+
+    public static long[] x = new long[MAXN];
+    public static long[] y = new long[MAXN];
+    public static long[] v = new long[MAXN];
+    public static int[] arr = new int[MAXN];
+
+    public static int root;
+
+    public static int[] ls = new int[MAXN];
+    public static int[] rs = new int[MAXN];
+    public static long[] sum = new long[MAXN];
+    public static long[] xmin = new long[MAXN];
+    public static long[] xmax = new long[MAXN];
+    public static long[] ymin = new long[MAXN];
+    public static long[] ymax = new long[MAXN];
+
+    public static int compareNode(int i, int j, int dimension) {
+        long v1 = dimension == 0 ? x[i] : y[i];
+        long v2 = dimension == 0 ? x[j] : y[j];
+        return v1 == v2 ? 0 : v1 < v2 ? -1 : 1;
+    }
+
+    public static void swap(int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+
+    public static int first, last;
+
+    public static void partition(int l, int r, int pidx, int dimension) {
+        first = l;
+        last = r;
+        int i = l;
+        while (i <= last) {
+            int cmp = compareNode(arr[i], pidx, dimension);
+            if (cmp == 0) {
+                i++;
+            } else if (cmp < 0) {
+                swap(first++, i++);
+            } else {
+                swap(i, last--);
+            }
+        }
+    }
+
+    public static void randSelect(int l, int r, int i, int deminsion) {
+        while (l <= r) {
+            int pidx = arr[l + (int) (Math.random() * (r - l + 1))];
+            partition(l, r, pidx, deminsion);
+            if (i < first) {
+                r = first - 1;
+            } else if (i > last) {
+                l = last + 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    public static void maintain(int i) {
+        sum[i] = v[i] + sum[ls[i]] + sum[rs[i]];
+        xmin[i] = Math.min(x[i], Math.min(xmin[ls[i]], xmin[rs[i]]));
+        xmax[i] = Math.max(x[i], Math.max(xmax[ls[i]], xmax[rs[i]]));
+        ymin[i] = Math.min(y[i], Math.min(ymin[ls[i]], ymin[rs[i]]));
+        ymax[i] = Math.max(y[i], Math.max(ymax[ls[i]], ymax[rs[i]]));
+    }
+
+    public static int build(int l, int r, int dimension) {
+        if (l > r) {
+            return 0;
+        }
+        int mid = (l + r) >> 1;
+        randSelect(l, r, mid, dimension);
+        int rt = arr[mid];
+        ls[rt] = build(l, mid - 1, dimension ^ 1);
+        rs[rt] = build(mid + 1, r, dimension ^ 1);
+        maintain(rt);
+        return rt;
+    }
+
+    public static long query(long a, long b, long c, int i) {
+        if (i == 0) {
+            return 0;
+        }
+        long ax1 = xmin[i] * a;
+        long ax2 = xmax[i] * a;
+        long by1 = ymin[i] * b;
+        long by2 = ymax[i] * b;
+        long minv = Math.min(ax1, ax2) + Math.min(by1, by2);
+        long maxv = Math.max(ax1, ax2) + Math.max(by1, by2);
+        if (minv >= c) {
+            return 0;
+        }
+        if (maxv < c) {
+            return sum[i];
+        }
+        long ans = 0;
+        if (a * x[i] + b * y[i] < c) {
+            ans += v[i];
+        }
+        ans += query(a, b, c, ls[i]);
+        ans += query(a, b, c, rs[i]);
+        return ans;
+    }
+
+    public static void main(String[] args) throws Exception {
+        FastReader in = new FastReader(System.in);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        n = in.nextInt();
+        m = in.nextInt();
+        for (int i = 1; i <= n; i++) {
+            x[i] = in.nextLong();
+            y[i] = in.nextLong();
+            v[i] = in.nextLong();
+            arr[i] = i;
+        }
+        xmin[0] = ymin[0] = INF;
+        xmax[0] = ymax[0] = -INF;
+        root = build(1, n, 0);
+        long a, b, c;
+        for (int i = 1; i <= m; i++) {
+            a = in.nextLong();
+            b = in.nextLong();
+            c = in.nextLong();
+            out.println(query(a, b, c, root));
+        }
+        out.flush();
+        out.close();
+    }
+
+    // 读写工具类
+    static class FastReader {
+
+        private final byte[] buffer = new byte[1 << 16];
+        private int ptr = 0, len = 0;
+        private final InputStream in;
+
+        FastReader(InputStream in) {
+            this.in = in;
+        }
+
+        private int readByte() throws IOException {
+            if (ptr >= len) {
+                len = in.read(buffer);
+                ptr = 0;
+                if (len <= 0)
+                    return -1;
+            }
+            return buffer[ptr++];
+        }
+
+        int nextInt() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            int val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+
+        long nextLong() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            long val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+
+    }
+}

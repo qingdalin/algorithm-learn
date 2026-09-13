@@ -1,0 +1,300 @@
+package algorithm.class205;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+
+/**
+ * @author: 汪大鹏
+ * @version: 1.0.0
+ * @date: 2026/9/13 10:05
+ * // 天使玩偶，java版
+ * // 本题就是讲解170，题目6，讲了CDQ分治的解法，这里用kdt的解法
+ * // 规定(x1, y1)和(x2, y2)之间的距离 = | x1 - x2 | + | y1 - y2 |
+ * // 一开始先给定n个点的位置，接下来有m条操作，每种操作是如下两种类型中的一种
+ * // 操作 1 x y : 在(x, y)位置添加一个点
+ * // 操作 2 x y : 打印已经添加的所有点中，距离(x, y)最近的点有多远
+ * // 1 <= n、m <= 3 * 10^5
+ * // 0 <= x、y <= 10^6
+ * // 测试链接 : https://www.luogu.com.cn/problem/P4169
+ * // 提交以下的code，提交时请把类名改成"Main"，可以通过所有测试用例
+ */
+public class Code06_AngelDoll1 {
+    public static int MAXN = 1000001;
+    public static int INF = 1 << 30;
+    public static int n, m;
+    public static int[] x = new int[MAXN];
+    public static int[] y = new int[MAXN];
+
+    public static int cntkdt;
+    public static int root;
+    public static int[] ls = new int[MAXN];
+    public static int[] rs = new int[MAXN];
+    public static int[] siz = new int[MAXN];
+    public static int[] xmin = new int[MAXN];
+    public static int[] xmax = new int[MAXN];
+    public static int[] ymin = new int[MAXN];
+    public static int[] ymax = new int[MAXN];
+
+    // 重构
+    public static double ALPHA = 0.7;
+    public static int top;
+    public static int topFather;
+    public static int topSide;
+    public static int topDimension;
+    public static int[] arr = new int[MAXN];
+    public static int treeSiz;
+
+    public static int init(int qx, int qy) {
+        cntkdt++;
+        x[cntkdt] = qx;
+        y[cntkdt] = qy;
+        ls[cntkdt] = rs[cntkdt] = 0;
+        siz[cntkdt] = 1;
+        xmin[cntkdt] = xmax[cntkdt] = qx;
+        ymax[cntkdt] = ymin[cntkdt] = qy;
+        return cntkdt;
+    }
+
+    public static void maintain(int i) {
+        siz[i] = 1 + siz[ls[i]] + siz[rs[i]];
+        xmin[i] = Math.min(x[i], Math.min(xmin[ls[i]], xmin[rs[i]]));
+        xmax[i] = Math.max(x[i], Math.max(xmax[ls[i]], xmax[rs[i]]));
+        ymin[i] = Math.min(y[i], Math.min(ymin[ls[i]], ymin[rs[i]]));
+        ymax[i] = Math.max(y[i], Math.max(ymax[ls[i]], ymax[rs[i]]));
+    }
+
+    public static int compareNode(int i, int j, int dimension) {
+        long v1 = dimension == 0 ? x[i] : y[i];
+        long v2 = dimension == 0 ? x[j] : y[j];
+        return v1 == v2 ? 0 : v1 < v2 ? -1 : 1;
+    }
+
+    public static void swap(int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+
+    public static int first, last;
+
+    public static void partition(int l, int r, int pidx, int dimension) {
+        first = l;
+        last = r;
+        int i = l;
+        while (i <= last) {
+            int cmp = compareNode(arr[i], pidx, dimension);
+            if (cmp == 0) {
+                i++;
+            } else if (cmp < 0) {
+                swap(first++, i++);
+            } else {
+                swap(i, last--);
+            }
+        }
+    }
+
+    public static void randSelect(int l, int r, int i, int deminsion) {
+        while (l <= r) {
+            int pidx = arr[l + (int) (Math.random() * (r - l + 1))];
+            partition(l, r, pidx, deminsion);
+            if (i < first) {
+                r = first - 1;
+            } else if (i > last) {
+                l = last + 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    public static int build(int l, int r, int dimension) {
+        if (l > r) {
+            return 0;
+        }
+        int mid = (l + r) >> 1;
+        randSelect(l, r, mid, dimension);
+        int rt = arr[mid];
+        ls[rt] = build(l, mid - 1, dimension ^ 1);
+        rs[rt] = build(mid + 1, r, dimension ^ 1);
+        maintain(rt);
+        return rt;
+    }
+    // 判断是否平衡
+    public static boolean balance(int i) {
+        return ALPHA * siz[i] >= Math.max(siz[ls[i]], siz[rs[i]]);
+    }
+    // 收集不平衡子树的节点编号，先序、中序、后序都可以，因为重构交替维度选中位点
+    public static void dfs(int i) {
+        if (i != 0) {
+            arr[++treeSiz] = i;
+            dfs(ls[i]);
+            dfs(rs[i]);
+        }
+    }
+
+    public static void rebuild() {
+        if (top != 0) {
+            treeSiz = 0;
+            dfs(top);
+            int newRoot = build(1, treeSiz, topDimension);
+            if (topFather == 0) {
+                root = newRoot;
+            } else if (topSide == 1) {
+                ls[topFather] = newRoot;
+            } else {
+                rs[topFather] = newRoot;
+            }
+        }
+    }
+
+    public static int add(int insertNode, int u, int fa, int side, int dimension) {
+        if (u == 0) {
+            return insertNode;
+        }
+        if (compareNode(insertNode, u, dimension) <= 0) {
+            ls[u] = add(insertNode, ls[u], u, 1, dimension ^ 1);
+        } else {
+            rs[u] = add(insertNode, rs[u], u, 2, dimension ^ 1);
+        }
+        maintain(u);
+        if (!balance(u)) {
+            top = u;
+            topFather = fa;
+            topSide = side;
+            topDimension = dimension;
+        }
+        return u;
+    }
+
+    public static void add(int qx, int qy) {
+        top = topFather = topSide = topDimension = 0;
+        int insertNode = init(qx, qy);
+        root = add(insertNode, root, 0, 0, 0);
+        rebuild();
+    }
+
+    public static int guess(int qx, int qy, int i) {
+        if (i == 0) {
+            return INF;
+        }
+        int ans = qx < xmin[i] ? xmin[i] - qx
+            : qx > xmax[i] ? qx - xmax[i] : 0;
+        ans += qy < ymin[i] ? ymin[i] - qy : qy > ymax[i] ? qy - ymax[i] : 0;
+        return ans;
+    }
+
+    public static int queryAns;
+
+    public static void updateAns(int qx, int qy, int i) {
+        if (i == 0) {
+            return;
+        }
+        queryAns = Math.min(queryAns, Math.abs(qx - x[i]) + Math.abs(qy - y[i]));
+        int gl = guess(qx, qy, ls[i]);
+        int gr = guess(qx, qy, rs[i]);
+        if (gl < gr) {
+            if (gl < queryAns) {
+                updateAns(qx, qy, ls[i]);
+            }
+            if (gr < queryAns) {
+                updateAns(qx, qy, rs[i]);
+            }
+        } else {
+            if (gr < queryAns) {
+                updateAns(qx, qy, rs[i]);
+            }
+            if (gl < queryAns) {
+                updateAns(qx, qy, ls[i]);
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        FastReader in = new FastReader(System.in);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        n = in.nextInt();
+        m = in.nextInt();
+        xmin[0] = ymin[0] = INF;
+        xmax[0] = ymax[0] = -INF;
+        for (int i = 1, qx, qy; i <= n; i++) {
+            qx = in.nextInt();
+            qy = in.nextInt();
+            add(qx, qy);
+        }
+        for (int i = 1, op, qx, qy; i <= m; i++) {
+            op = in.nextInt();
+            qx = in.nextInt();
+            qy = in.nextInt();
+            if (op == 1) {
+                add(qx, qy);
+            } else {
+                queryAns = INF;
+                updateAns(qx, qy, root);
+                out.println(queryAns);
+            }
+        }
+        out.flush();
+        out.close();
+    }
+
+    // 读写工具类
+    static class FastReader {
+
+        private final byte[] buffer = new byte[1 << 16];
+        private int ptr = 0, len = 0;
+        private final InputStream in;
+
+        FastReader(InputStream in) {
+            this.in = in;
+        }
+
+        private int readByte() throws IOException {
+            if (ptr >= len) {
+                len = in.read(buffer);
+                ptr = 0;
+                if (len <= 0)
+                    return -1;
+            }
+            return buffer[ptr++];
+        }
+
+        int nextInt() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            int val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+
+        long nextLong() throws IOException {
+            int c;
+            do {
+                c = readByte();
+            } while (c <= ' ' && c != -1);
+            boolean neg = false;
+            if (c == '-') {
+                neg = true;
+                c = readByte();
+            }
+            long val = 0;
+            while (c > ' ' && c != -1) {
+                val = val * 10 + (c - '0');
+                c = readByte();
+            }
+            return neg ? -val : val;
+        }
+
+    }
+}
